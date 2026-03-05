@@ -9,6 +9,51 @@ import { Keyboard } from '../components/Keyboard';
 
 const ROWS = 6;
 const COLS = 5;
+
+const getKeyStatuses = (board: string[][], currentRow: number, solution: string) => {
+  // Implement the logic to determine key statuses
+const statuses: { [key: string]: string } = {};
+  const solUpper = solution.toUpperCase();
+  const solutionCharCounts: { [key: string]: number } = {};
+
+  for (const char of solUpper) {
+    solutionCharCounts[char] = (solutionCharCounts[char] || 0) + 1;
+  }
+
+  const foundCorrectPositions = new Set<string>();
+  for (let i = 0; i < currentRow; i++) {
+    const row = board[i];
+    row.forEach((letter, j) => {
+      const upLetter = letter.toUpperCase();
+      if (upLetter && upLetter === solUpper[j]) {
+        foundCorrectPositions.add(`${upLetter}-${j}`);
+      }
+    });
+  }
+
+  for (let i = 0; i < currentRow; i++) {
+    const row = board[i];
+    row.forEach((letter) => {
+      const upLetter = letter.toUpperCase();
+      if (!upLetter) return;
+
+      const correctDiscoveries = Array.from(foundCorrectPositions)
+        .filter(pos => pos.startsWith(`${upLetter}-`)).length;
+
+      if (correctDiscoveries > 0 && correctDiscoveries === solutionCharCounts[upLetter]) {
+        statuses[upLetter] = 'all_correct';
+      } else if (correctDiscoveries > 0) {
+        statuses[upLetter] = 'partially_correct';
+      } else if (solUpper.includes(upLetter)) {
+        statuses[upLetter] = 'present';
+      } else {
+        if (!statuses[upLetter]) statuses[upLetter] = 'absent';
+      }
+    });
+  }
+  return statuses;
+};
+
 export const GameScreen = () => {
   const [board, setBoard] = useState<string[][]>(
     Array(ROWS).fill(null).map(() => Array(COLS).fill(""))
@@ -16,53 +61,55 @@ export const GameScreen = () => {
   const [currentRow, setCurrentRow] = useState(0);
   const [currentCol, setCurrentCol] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [didWin, setDidWin] = useState(false);
 
-  const solution = "TREPP"; // Mängu lahendus
+  const solution = "TREPP";
 
   const resetGame = () => {
     setBoard(Array(ROWS).fill(null).map(() => Array(COLS).fill("")));
     setCurrentRow(0);
     setCurrentCol(0);
+    setIsGameOver(false);
+    setDidWin(false);
+    setShowModal(false); // Sulgeme ka akna
   };
 
-const handleKeyPress = (key: string) => {
-  if (key === 'ENTER') {
-    // 1. KONTROLL: Kas mäng on juba võidetud ja kasutaja vajutab uuesti ENTER?
-    if (currentRow > 0) {
-      const lastGuess = board[currentRow - 1].join("").toUpperCase();
-      if (lastGuess === solution.toUpperCase()) {
-        setIsGameOver(true); // Avab uuesti modaali
-        return;
+  const handleKeyPress = (key: string) => {
+    // 1. Kui mäng on läbi, reageeri ainult ENTERile
+    if (isGameOver) {
+      if (key === 'ENTER') {
+        setShowModal(true);
       }
+      return;
     }
 
-    // 2. TAVALINE KONTROLL: Kui rida on täis ja mäng käib
-    if (currentCol === COLS) {
-      const currentGuess = board[currentRow].join("").toUpperCase();
-      const targetSolution = solution.toUpperCase();
+    // 2. ENTER loogika
+    if (key === 'ENTER') {
+      if (currentCol === COLS) {
+        const currentGuess = board[currentRow].join("").toUpperCase();
+        const targetSolution = solution.toUpperCase();
 
-      console.log("Kontrollin sõna:", currentGuess, "Vastus:", targetSolution);
-
-      if (currentGuess === targetSolution) {
-  setCurrentRow(currentRow + 1);
-  setCurrentCol(0); // Algseisustame veeru, et vältida vigu
-  setTimeout(() => {
-    setIsGameOver(true);
-  }, 500);
-  return;
-} else if (currentRow === ROWS - 1) {
-        Alert.alert("MÄNG LÄBI", `Õige sõna oli: ${targetSolution}`, [
-          { text: "Proovi uuesti", onPress: resetGame }
-        ]);
-      } else {
-        // Kui sõna valesti, liigume järgmisele reale
-        setCurrentRow(currentRow + 1);
-        setCurrentCol(0);
+        if (currentGuess === targetSolution) {
+          setDidWin(true);
+          setIsGameOver(true);
+          setShowModal(true);
+          setCurrentRow(currentRow + 1);
+        } else if (currentRow === ROWS - 1) {
+          setDidWin(false);
+          setIsGameOver(true);
+          setShowModal(true);
+          setCurrentRow(currentRow + 1);
+        } else {
+          setCurrentRow(currentRow + 1);
+          setCurrentCol(0);
+        }
       }
-    } else {
-      console.log("Rida pole veel täis!");
+      return;
     }
-    } else if (key === '⌫') {
+
+    // 3. Kustutamine ja kirjutamine
+    if (key === '⌫') {
       if (currentCol > 0) {
         const newBoard = [...board.map(row => [...row])];
         newBoard[currentRow][currentCol - 1] = "";
@@ -79,50 +126,47 @@ const handleKeyPress = (key: string) => {
     }
   };
 
+  const keyStatuses = getKeyStatuses(board, currentRow, solution);
+
   return (
     <View style={styles.container}>
+      {/* ... (Gridi osa on sul õige) ... */}
       <View style={styles.grid}>
         {board.map((row, i) => (
           <View key={`row-${i}`} style={styles.row}>
             {row.map((cell: string, j: number) => (
-  <View key={`cell-${i}-${j}`} style={[styles.cell, getCellStyle(i, currentRow, cell, j, solution)]}>
-    <Text style={styles.cellText}>{cell}</Text>
-  </View>
-))}
+              <View key={`cell-${i}-${j}`} style={[styles.cell, getCellStyle(i, currentRow, cell, j, solution)]}>
+                <Text style={styles.cellText}>{cell}</Text>
+              </View>
+            ))}
           </View>
         ))}
       </View>
 
       <View style={styles.footer}>
-        <Keyboard onKeyPress={handleKeyPress} />
+        <Keyboard onKeyPress={handleKeyPress} keyStatuses={keyStatuses} />
       </View>
-      {isGameOver && (
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      <Text style={styles.modalTitle}>VÕIT! 🎉</Text>
-      <Text style={styles.modalBody}>Arvasid sõna ära!</Text>
-      
-      <View style={styles.modalButtons}>
-        <TouchableOpacity 
-          style={[styles.modalButton, { backgroundColor: Colors.absent }]} 
-          onPress={() => setIsGameOver(false)}
-        >
-          <Text style={styles.buttonText}>Vaata tulemust</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.modalButton, { backgroundColor: Colors.correct }]} 
-          onPress={() => {
-            resetGame();
-            setIsGameOver(false);
-          }}
-        >
-          <Text style={styles.buttonText}>Uus mäng</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-)}
+      {showModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={[styles.modalTitle, { color: didWin ? Colors.correct : '#FF3B30' }]}>
+              {didWin ? "VÕIT! 🎉" : "KAOTUS ÕHTUL 🌙"}
+            </Text>
+            <Text style={styles.modalBody}>
+              {didWin ? "Arvasid sõna ära!" : `Õige sõna oli: ${solution.toUpperCase()}`}
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={[styles.modalButton, { backgroundColor: Colors.absent }]} onPress={() => setShowModal(false)}>
+                <Text style={styles.buttonText}>Vaata tulemust</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, { backgroundColor: Colors.correct }]} onPress={resetGame}>
+                <Text style={styles.buttonText}>Uus mäng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 };

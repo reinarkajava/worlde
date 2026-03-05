@@ -18,23 +18,47 @@ interface KeyboardProps {
   onKeyPress: (key: string) => void;
 }
 
-export const Keyboard = ({ onKeyPress }: KeyboardProps) => {
+export const Keyboard = ({ onKeyPress, keyStatuses = {} }: any) => {
+  const getButtonColor = (key: string) => {
+    const status = keyStatuses[key.toUpperCase()];
+    if (status === 'all_correct') return Colors.correct; // Täisroheline
+    if (status === 'partially_correct' || status === 'present') return Colors.present; // Kollane
+    if (status === 'absent') return '#3A3A3C';
+    return '#D3D6DA';
+  };
+
+  const getTextColor = (key: string) => {
+    const status = keyStatuses[key.toUpperCase()];
+    return status ? 'white' : 'black'; // Valge tekst värvilistel nuppudel, must tavalistel
+  };
+
   return (
     <View style={styles.keyboard}>
       {ROWS.map((row, i) => (
-        <View key={`row-${i}`} style={styles.row}>
-          {row.map((key) => (
-            <TouchableOpacity
-              key={key}
-              style={[
-                styles.key,
-                key === 'ENTER' || key === '⌫' ? styles.wideKey : null
-              ]}
-              onPress={() => onKeyPress(key)}
-            >
-              <Text style={styles.keyText}>{key}</Text>
-            </TouchableOpacity>
-          ))}
+        <View key={i} style={styles.row}>
+          {row.map((key) => {
+            const status = keyStatuses[key.toUpperCase()];
+            const isWide = key === 'ENTER' || key === '⌫';
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  styles.key, // Nimi peab ühtima styles.key-ga
+                  isWide && styles.wideKey,
+                  { backgroundColor: getButtonColor(key) }
+                ]}
+                onPress={() => onKeyPress(key)}
+              >
+                <Text style={[styles.keyText, { color: status ? 'white' : 'black' }]}>
+                  {key}
+                </Text>
+                {/* SÄRATÄPP: Kuvame väikese rohelise täpi, kui osa tähti on leitud */}
+                {status === 'partially_correct' && (
+                  <View style={styles.dotIndicator} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       ))}
     </View>
@@ -66,7 +90,18 @@ const styles = StyleSheet.create({
     width: KEY_WIDTH * 1.5,
   },
   keyText: {
-    fontSize: 15,
+    fontSize: SCREEN_WIDTH < 400 ? 10 : 13, // Väiksemal ekraanil (mobiil) tee tekst väiksemaks
     fontWeight: 'bold',
   },
+  dotIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#6aaa64', // Roheline täpp
+    borderWidth: 1,
+    borderColor: 'white',
+  }
 });
