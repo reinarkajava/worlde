@@ -1,6 +1,9 @@
+// src/screens/FriendsScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '../context/UserContext';
 
 const TOP_PLAYERS = [
   { id: '1', name: 'Emma', streak: 25, score: 520, initials: 'E', color: '#8B5CF6', bgColor: '#FFFBEB', borderColor: '#FDE68A' },
@@ -9,16 +12,19 @@ const TOP_PLAYERS = [
 ];
 
 export const FriendsScreen = () => {
+
+  const { userEmail } = useUser();
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Päis (sama mis teistel vaadetel) */}
-      <div style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>Wordle</Text>
         <View style={styles.headerIcons}>
-          <Text style={styles.initials}>rt</Text>
+          <Text style={styles.initials}>{userEmail.substring(0, 2).toLowerCase()}</Text>
           <Ionicons name="log-out-outline" size={24} color="#333" />
         </View>
-      </div>
+      </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.mainCard}>

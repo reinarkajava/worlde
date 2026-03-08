@@ -1,18 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from './src/lib/supabase';
+import { AuthScreen } from './src/screens/AuthScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; // PARANDATUD
 import { Ionicons } from '@expo/vector-icons'; // PARANDATUD BRAUSERI JAOKS
 
 import { DailyScreen } from './src/screens/DailyScreen';
-import { GameScreen } from './src/screens/GameScreen'; 
+import { PracticeScreen } from './src/screens/PracticeScreen'; 
 import { StatsScreen } from './src/screens/StatsScreen';
 import { FriendsScreen } from './src/screens/FriendsScreen';
 import { Colors } from './src/theme/colors';
+import { UserProvider } from './src/context/UserContext';
 
 const Tab = createBottomTabNavigator();
 
 export default function App() {
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    // Kontrollime, kas kasutaja on juba sisse logitud
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Kuulame sisselogimise/väljalogimise sündmusi
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+  }, []);
+
+  // KUI KASUTAJA POLE SISSE LOGITUD, NÄITAME AUTH VAADET
+  if (!session) {
+    return <AuthScreen />;
+  }
+
+  // KUI ON SISSE LOGITUD, NÄITAME PÄRIS ÄPPI
   return (
+    <UserProvider>
     <NavigationContainer>
       <Tab.Navigator
         screenOptions={({ route }) => ({
@@ -32,10 +56,11 @@ export default function App() {
         })}
       >
         <Tab.Screen name="Daily" component={DailyScreen} />
-        <Tab.Screen name="Practice" component={GameScreen} />
+        <Tab.Screen name="Practice" component={PracticeScreen} />
         <Tab.Screen name="Stats" component={StatsScreen} />
         <Tab.Screen name="Friends" component={FriendsScreen} />
       </Tab.Navigator>
     </NavigationContainer>
+    </UserProvider>
   );
 }

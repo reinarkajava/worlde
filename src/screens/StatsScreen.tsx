@@ -1,22 +1,62 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useUser } from '../context/UserContext';
 
+const StatItem = ({ label, value }: { label: string; value: string | number }) => (
+  <View style={styles.statBox}>
+    <Text style={styles.statValue}>{value}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>
+);
 export const StatsScreen = () => {
-  const StatItem = ({ label, value }: { label: string; value: string | number }) => (
-    <View style={styles.statBox}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
+  const { userEmail } = useUser(); // Kasutame globaalset emaili
+  const [stats, setStats] = useState({
+    played_count: 0,
+    win_percentage: 0,
+    current_streak: 0,
+    total_points: 0
+  });
+
+  const fetchStats = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (data) setStats(data);
+      if (error) console.log('Viga andmete laadimisel:', error.message);
+    }
+  };
+
+useFocusEffect(
+  useCallback(() => {
+    fetchStats();
+  }, [])
+);
+
+  // 2. VÄLJALOGIMISE FUNKTSIOON
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) Alert.alert('Viga', error.message);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Wordle</Text>
         <View style={styles.headerIcons}>
-          <Text style={styles.initials}>rt</Text>
-          <Ionicons name="log-out-outline" size={24} color="#333" />
+          <Text style={styles.initials}>{userEmail.substring(0, 2).toLowerCase()}</Text>
+          <TouchableOpacity onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#333" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -26,17 +66,17 @@ export const StatsScreen = () => {
           
           {/* Ülemine rida numbritega */}
           <View style={styles.statsRow}>
-            <StatItem label="Played" value={0} />
-            <StatItem label="Win %" value={0} />
-            <StatItem label="Streak" value={0} />
-            <StatItem label="Max" value={0} />
+            <StatItem label="Played" value={stats.played_count} />
+            <StatItem label="Win %" value={stats.win_percentage} />
+            <StatItem label="Streak" value={stats.current_streak} />
+            <StatItem label="Max" value={stats.total_points} />
           </View>
 
-          {/* Lilla kaart */}
+          {/* Andmete sidumine kaartidega */}
           <View style={[styles.infoCard, { backgroundColor: '#7C4DFF' }]}>
             <View>
               <Text style={styles.infoCardLabel}>Total Points</Text>
-              <Text style={styles.infoCardValue}>0</Text>
+              <Text style={styles.infoCardValue}>{stats.total_points}</Text>
             </View>
             <Ionicons name="trophy-outline" size={40} color="rgba(255,255,255,0.6)" />
           </View>
@@ -45,7 +85,7 @@ export const StatsScreen = () => {
           <View style={[styles.infoCard, { backgroundColor: '#FF5722' }]}>
             <View>
               <Text style={styles.infoCardLabel}>Practice All-Time High</Text>
-              <Text style={styles.infoCardValue}>0</Text>
+              <Text style={styles.infoCardValue}>{stats.total_points}</Text>
             </View>
             <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.6)" />
           </View>
