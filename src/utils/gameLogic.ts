@@ -29,7 +29,8 @@ export const getCellStyle = (
   return { backgroundColor: Colors.absent, borderColor: Colors.absent };
 };
 
-const getKeyStatuses = (board: string[][], currentRow: number, solution: string) => {
+
+export const getKeyStatuses = (board: string[][], currentRow: number, solution: string) => {
   const statuses: { [key: string]: string } = {};
   const solUpper = solution.toUpperCase();
 
