@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
+import { useUser } from '../context/UserContext';
 
 const CHALLENGES = [
   { id: '1', title: '4 Letters', subtitle: '4 letter word', icon: '4' },
@@ -12,6 +13,9 @@ const CHALLENGES = [
 ];
 
 export const DailyScreen = () => {
+
+    const { userEmail } = useUser();
+
   const renderItem = ({ item }: { item: typeof CHALLENGES[0] }) => (
     <TouchableOpacity style={styles.card}>
       <View style={styles.cardLeft}>
@@ -33,7 +37,7 @@ export const DailyScreen = () => {
       <View style={styles.topHeader}>
         <Text style={styles.headerTitle}>Wordle</Text>
         <View style={styles.topIcons}>
-          <Text style={styles.userInitials}>rt</Text>
+          <Text style={styles.initials}>{userEmail.substring(0, 2).toLowerCase()}</Text>
           <Ionicons name="log-out-outline" size={24} color="#333" />
         </View>
       </View>
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A1C1E' },
   topIcons: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-  userInitials: { fontSize: 16, color: '#666' },
+  initials: { fontSize: 16, color: '#666' },
   
   mainHeaderCard: {
     backgroundColor: 'white',

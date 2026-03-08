@@ -9,7 +9,7 @@ export const getCellStyle = (
 ) => {
   // Kui rida pole veel kinnitatud (mängija alles trükib), näitame ainult piirjoont
   if (row >= currentRow || char === "") {
-    return { borderColor: Colors.border };
+    return { borderColor: Colors.border, backgroundColor: 'transparent' };
   }
 
   const upperChar = char.toUpperCase();
@@ -29,6 +29,10 @@ export const getCellStyle = (
   return { backgroundColor: Colors.absent, borderColor: Colors.absent };
 };
 
+// Funktsioon teksti värvi määramiseks ruudustikus
+export const getCellTextStyle = (row: number, currentRow: number) => {
+  return row < currentRow ? { color: 'white' } : { color: 'black' };
+};
 
 export const getKeyStatuses = (board: string[][], currentRow: number, solution: string) => {
   const statuses: { [key: string]: string } = {};
