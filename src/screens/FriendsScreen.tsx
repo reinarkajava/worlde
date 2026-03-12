@@ -1,19 +1,17 @@
 // src/screens/FriendsScreen.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../context/UserContext';
-
-const TOP_PLAYERS = [
-  { id: '1', name: 'Emma', streak: 25, score: 520, initials: 'E', color: '#8B5CF6', bgColor: '#FFFBEB', borderColor: '#FDE68A' },
-  { id: '2', name: 'Sarah', streak: 12, score: 450, initials: 'S', color: '#6366F1', bgColor: '#F1F5F9', borderColor: '#CBD5E1' },
-  { id: '3', name: 'Mike', streak: 8, score: 380, initials: 'M', color: '#A855F7', bgColor: '#FFF7ED', borderColor: '#FFEDD5' },
-];
+import { LeaderboardModal } from '../components/LeaderboardModal';
+import { TOP_PLAYERS } from '../constants/data';
 
 export const FriendsScreen = () => {
 
   const { userEmail } = useUser();
+  const [leaderboardVisible, setLeaderboardVisible] = useState(false);
+  const topThree = TOP_PLAYERS.slice(0, 3);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -35,16 +33,24 @@ export const FriendsScreen = () => {
           </View>
 
           {/* Sinine nupp */}
-          <TouchableOpacity style={styles.leaderboardButton}>
+          <TouchableOpacity style={styles.leaderboardButton}
+          onPress={() => setLeaderboardVisible(true)}
+          >
             <Text style={styles.buttonText}>View Full Leaderboard</Text>
           </TouchableOpacity>
+
+          <LeaderboardModal 
+        isVisible={leaderboardVisible} 
+        onClose={() => setLeaderboardVisible(false)} 
+      />
 
           <View style={styles.divider} />
 
           <Text style={styles.sectionTitle}>Top Players</Text>
+          
 
           {/* Mängijate nimekiri */}
-          {TOP_PLAYERS.map((player) => (
+          {topThree.map((player) => (
             <TouchableOpacity 
               key={player.id} 
               style={[styles.playerCard, { backgroundColor: player.bgColor, borderColor: player.borderColor }]}
