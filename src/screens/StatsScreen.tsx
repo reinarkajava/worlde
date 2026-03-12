@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
+import { DetailedStatsView } from '../components/DetailedStatsView'; // Veendu, et import on õige
 
 const StatItem = ({ label, value }: { label: string; value: string | number }) => (
   <View style={styles.statBox}>
@@ -14,6 +15,9 @@ const StatItem = ({ label, value }: { label: string; value: string | number }) =
 );
 export const StatsScreen = () => {
   const { userEmail } = useUser(); // Kasutame globaalset emaili
+
+  const [isDetailedViewVisible, setIsDetailedViewVisible] = useState(false);
+
   const [stats, setStats] = useState({
     played_count: 0,
     win_percentage: 0,
@@ -29,10 +33,19 @@ export const StatsScreen = () => {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (data) setStats(data);
-      if (error) console.log('Viga andmete laadimisel:', error.message);
+      if (error) {
+        console.log('Viga andmete laadimisel:', error.message);
+        return;
+    }
+    if (data) {
+        setStats(data);
+      } else {
+        // Kui andmeid ei leitud (uus kasutaja), võime siin vajadusel 
+        // profiili luua või jätta vaikimisi nullid (nagu sul state-is on).
+        console.log('Profiili ei leitud, kasutame vaikeväärtusi.');
+      }
     }
   };
 
@@ -64,7 +77,6 @@ useFocusEffect(
         <View style={styles.mainCard}>
           <Text style={styles.cardTitle}>Your Statistics</Text>
           
-          {/* Ülemine rida numbritega */}
           <View style={styles.statsRow}>
             <StatItem label="Played" value={stats.played_count} />
             <StatItem label="Win %" value={stats.win_percentage} />
@@ -72,7 +84,6 @@ useFocusEffect(
             <StatItem label="Max" value={stats.total_points} />
           </View>
 
-          {/* Andmete sidumine kaartidega */}
           <View style={[styles.infoCard, { backgroundColor: '#7C4DFF' }]}>
             <View>
               <Text style={styles.infoCardLabel}>Total Points</Text>
@@ -81,7 +92,6 @@ useFocusEffect(
             <Ionicons name="trophy-outline" size={40} color="rgba(255,255,255,0.6)" />
           </View>
 
-          {/* Oranž kaart */}
           <View style={[styles.infoCard, { backgroundColor: '#FF5722' }]}>
             <View>
               <Text style={styles.infoCardLabel}>Practice All-Time High</Text>
@@ -90,12 +100,21 @@ useFocusEffect(
             <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.6)" />
           </View>
 
-          {/* Alumine nupp */}
-          <TouchableOpacity style={styles.detailButton}>
+          <TouchableOpacity 
+            style={styles.detailButton}
+            onPress={() => setIsDetailedViewVisible(true)}
+          >
             <Text style={styles.detailButtonText}>View Detailed Statistics</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* See komponent hüppab nüüd nupu vajutamisel Modalina lahti */}
+      <DetailedStatsView 
+        isVisible={isDetailedViewVisible} 
+        onClose={() => setIsDetailedViewVisible(false)}
+        userStats={stats} // Saada päris andmed edasi
+      />
     </SafeAreaView>
   );
 };
@@ -114,7 +133,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: 'bold' },
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   initials: { color: '#666', fontSize: 16 },
-
   content: { padding: 20 },
   mainCard: {
     backgroundColor: 'white',
@@ -126,12 +144,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 25, color: '#1A1C1E' },
-  
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
   statBox: { alignItems: 'center', flex: 1 },
   statValue: { fontSize: 28, fontWeight: 'bold', color: '#1A1C1E' },
   statLabel: { fontSize: 13, color: '#666', marginTop: 4 },
-
   infoCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -142,7 +158,6 @@ const styles = StyleSheet.create({
   },
   infoCardLabel: { color: 'white', fontSize: 14, opacity: 0.9 },
   infoCardValue: { color: 'white', fontSize: 32, fontWeight: 'bold', marginTop: 5 },
-
   detailButton: {
     backgroundColor: '#4D4DFF',
     padding: 18,
