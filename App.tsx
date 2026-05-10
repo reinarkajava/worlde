@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './src/lib/supabase';
 import { AuthScreen } from './src/screens/AuthScreen';
+import { ForgotPasswordScreen } from './src/screens/ForgotPasswordScreen';
+import { ResetPasswordScreen } from './src/screens/ResetPasswordScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; // PARANDATUD
 import { Ionicons } from '@expo/vector-icons'; // PARANDATUD BRAUSERI JAOKS
@@ -13,9 +15,11 @@ import { Colors } from './src/theme/colors';
 import { UserProvider } from './src/context/UserContext';
 
 const Tab = createBottomTabNavigator();
+type AuthView = 'login' | 'forgot-password' | 'reset-password';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
+  const [authView, setAuthView] = useState<AuthView>('login');
 
   useEffect(() => {
     // Kontrollime, kas kasutaja on juba sisse logitud
@@ -24,14 +28,34 @@ export default function App() {
     });
 
     // Kuulame sisselogimise/väljalogimise sündmusi
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthView('reset-password');
+      }
     });
   }, []);
 
+  if (authView === 'reset-password') {
+    return (
+      <ResetPasswordScreen
+        onComplete={async () => {
+          await supabase.auth.signOut();
+          setSession(null);
+          setAuthView('login');
+        }}
+      />
+    );
+  }
+
   // KUI KASUTAJA POLE SISSE LOGITUD, NÄITAME AUTH VAADET
   if (!session) {
-    return <AuthScreen />;
+    if (authView === 'forgot-password') {
+      return <ForgotPasswordScreen onBack={() => setAuthView('login')} />;
+    }
+
+    return <AuthScreen onForgotPassword={() => setAuthView('forgot-password')} />;
   }
 
   // KUI ON SISSE LOGITUD, NÄITAME PÄRIS ÄPPI
@@ -42,10 +66,10 @@ export default function App() {
         screenOptions={({ route }) => ({
           tabBarIcon: ({ focused, color, size }) => {
             let iconName: any; // Lisatud 'any' tüübi vea vältimiseks
-            if (route.name === 'Daily') iconName = focused ? 'calendar' : 'calendar-outline';
-            else if (route.name === 'Practice') iconName = focused ? 'barbell' : 'barbell-outline';
-            else if (route.name === 'Stats') iconName = focused ? 'trophy' : 'trophy-outline';
-            else if (route.name === 'Friends') iconName = focused ? 'people' : 'people-outline';
+            if (route.name === 'Igapäevane') iconName = focused ? 'calendar' : 'calendar-outline';
+            else if (route.name === 'Harjutamine') iconName = focused ? 'barbell' : 'barbell-outline';
+            else if (route.name === 'Statistika') iconName = focused ? 'trophy' : 'trophy-outline';
+            else if (route.name === 'Sõbrad') iconName = focused ? 'people' : 'people-outline';
             
             return <Ionicons name={iconName} size={size} color={color} />;
           },
@@ -55,10 +79,10 @@ export default function App() {
           headerShown: false,
         })}
       >
-        <Tab.Screen name="Daily" component={DailyScreen} />
-        <Tab.Screen name="Practice" component={PracticeScreen} />
-        <Tab.Screen name="Stats" component={StatsScreen} />
-        <Tab.Screen name="Friends" component={FriendsScreen} />
+        <Tab.Screen name="Igapäevane" component={DailyScreen} />
+        <Tab.Screen name="Harjutamine" component={PracticeScreen} />
+        <Tab.Screen name="Statistika" component={StatsScreen} />
+        <Tab.Screen name="Sõbrad" component={FriendsScreen} />
       </Tab.Navigator>
     </NavigationContainer>
     </UserProvider>

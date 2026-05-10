@@ -75,18 +75,18 @@ useFocusEffect(
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.mainCard}>
-          <Text style={styles.cardTitle}>Your Statistics</Text>
+          <Text style={styles.cardTitle}>Sinu statistika</Text>
           
           <View style={styles.statsRow}>
-            <StatItem label="Played" value={stats.played_count} />
-            <StatItem label="Win %" value={stats.win_percentage} />
+            <StatItem label="Mängud" value={stats.played_count} />
+            <StatItem label="Edukate lahendamiste %" value={stats.win_percentage} />
             <StatItem label="Streak" value={stats.current_streak} />
-            <StatItem label="Max" value={stats.total_points} />
+            <StatItem label="Maksimum" value={stats.total_points} />
           </View>
 
           <View style={[styles.infoCard, { backgroundColor: '#7C4DFF' }]}>
             <View>
-              <Text style={styles.infoCardLabel}>Total Points</Text>
+              <Text style={styles.infoCardLabel}>Kogu punktisumma</Text>
               <Text style={styles.infoCardValue}>{stats.total_points}</Text>
             </View>
             <Ionicons name="trophy-outline" size={40} color="rgba(255,255,255,0.6)" />
@@ -94,7 +94,7 @@ useFocusEffect(
 
           <View style={[styles.infoCard, { backgroundColor: '#FF5722' }]}>
             <View>
-              <Text style={styles.infoCardLabel}>Practice All-Time High</Text>
+              <Text style={styles.infoCardLabel}>Harjutamise kõrgeim skoor</Text>
               <Text style={styles.infoCardValue}>{stats.total_points}</Text>
             </View>
             <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.6)" />
@@ -104,7 +104,7 @@ useFocusEffect(
             style={styles.detailButton}
             onPress={() => setIsDetailedViewVisible(true)}
           >
-            <Text style={styles.detailButtonText}>View Detailed Statistics</Text>
+            <Text style={styles.detailButtonText}>Vaata detailsemat statistikat</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

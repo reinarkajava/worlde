@@ -1,20 +1,26 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { useUser } from '../context/UserContext';
+import { supabase } from '../lib/supabase';
 
 const CHALLENGES = [
-  { id: '1', title: '4 Letters', subtitle: '4 letter word', icon: '4' },
-  { id: '2', title: '5 Letters #1', subtitle: '5 letter word', icon: '5' },
-  { id: '3', title: '5 Letters #2', subtitle: '5 letter word', icon: '5' },
-  { id: '4', title: '5 Letters #3', subtitle: '5 letter word', icon: '5' },
-  { id: '5', title: '6 Letters', subtitle: '6 letter word', icon: '6' },
+  { id: '1', title: '4 Täheline', subtitle: '4 täheline sõna', icon: '4' },
+  { id: '2', title: '5 Täheline #1', subtitle: '5 täheline sõna', icon: '5' },
+  { id: '3', title: '5 Täheline #2', subtitle: '5 täheline sõna', icon: '5' },
+  { id: '4', title: '5 Täheline #3', subtitle: '5 täheline sõna', icon: '5' },
+  { id: '5', title: '6 Täheline', subtitle: '6 täheline sõna', icon: '6' },
 ];
 
 export const DailyScreen = () => {
 
     const { userEmail } = useUser();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) Alert.alert('Viga', error.message);
+  };
 
   const renderItem = ({ item }: { item: typeof CHALLENGES[0] }) => (
     <TouchableOpacity style={styles.card}>
@@ -38,7 +44,9 @@ export const DailyScreen = () => {
         <Text style={styles.headerTitle}>Wordle</Text>
         <View style={styles.topIcons}>
           <Text style={styles.initials}>{userEmail.substring(0, 2).toLowerCase()}</Text>
-          <Ionicons name="log-out-outline" size={24} color="#333" />
+          <TouchableOpacity onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#333" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -47,7 +55,7 @@ export const DailyScreen = () => {
         <View style={styles.mainHeaderRow}>
           <View style={styles.mainTitleContainer}>
              <Ionicons name="calendar" size={24} color="#7C4DFF" style={{marginRight: 8}} />
-             <Text style={styles.mainHeaderText}>Daily Challenges</Text>
+             <Text style={styles.mainHeaderText}>Igapäevane Sõna</Text>
           </View>
           <View style={styles.trophyBadge}>
             <Ionicons name="trophy" size={18} color="white" />
@@ -55,7 +63,7 @@ export const DailyScreen = () => {
           </View>
         </View>
         
-        <Text style={styles.progressText}>Complete 0/5 challenges today</Text>
+        <Text style={styles.progressText}>0/5 päevaväljakutset tehtud</Text>
         <View style={styles.progressBarBackground}>
           <View style={[styles.progressBarFill, { width: '0%' }]} />
         </View>

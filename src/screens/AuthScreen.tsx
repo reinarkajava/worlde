@@ -12,41 +12,104 @@ import {
   Alert 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-// Siia lisame hiljem Supabase kliendi impordi
 
-export const AuthScreen = () => {
+interface AuthScreenProps {
+  onForgotPassword: () => void;
+}
+
+export const AuthScreen = ({ onForgotPassword }: AuthScreenProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState('');
 
-const handleAuth = async () => {
-  if (!email || !password) {
-    Alert.alert("Viga", "Palun täida kõik väljad!");
-    return;
-  }
+  const isDuplicateEmailError = (message: string) => {
+    const lowerMessage = message.toLowerCase();
 
-  setLoading(true);
-  
-  if (isSignUp) {
-    // REGISTREERIMINE
-    const { error } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    });
-    if (error) Alert.alert("Viga registreerimisel", error.message);
-    else Alert.alert("Edu!", "Konto loodud! Kontrolli oma e-posti kinnituskirja jaoks.");
-  } else {
-    // SISSESELOGIMINE
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    });
-    if (error) Alert.alert("Viga sisselogimisel", error.message);
-  }
-  
-  setLoading(false);
-};
+    return (
+      lowerMessage.includes('already registered') ||
+      lowerMessage.includes('already exists') ||
+      lowerMessage.includes('user already')
+    );
+  };
+
+  const showDuplicateEmailAlert = () => {
+    Alert.alert(
+      'Konto on juba olemas',
+      'Selle e-posti aadressiga konto on juba registreeritud. Palun logi sisse või kasuta parooli taastamist.'
+    );
+  };
+
+  const handleAuth = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail || !password) {
+      Alert.alert('Viga', 'Palun täida kõik väljad!');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        setConfirmationMessage('');
+
+        const { data, error } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password: password,
+        });
+
+        console.log('Registreerimise vastus:', {
+          hasUser: Boolean(data.user),
+          hasSession: Boolean(data.session),
+          email: trimmedEmail,
+        });
+
+        if (error) {
+          console.log('Registreerimise viga:', error.message);
+
+          if (isDuplicateEmailError(error.message)) {
+            showDuplicateEmailAlert();
+          } else {
+            Alert.alert('Viga registreerimisel', error.message);
+          }
+
+          return;
+        }
+
+        if (data.user?.identities?.length === 0) {
+          showDuplicateEmailAlert();
+          return;
+        }
+
+        if (!data.user) {
+          Alert.alert('Viga registreerimisel', 'Supabase ei tagastanud uut kasutajat. Kontrolli Supabase Authentication seadeid.');
+          return;
+        }
+
+        setConfirmationMessage('Teile on saadetud kinnitusmeil');
+        setPassword('');
+
+        if (data.session) {
+          await supabase.auth.signOut();
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password: password,
+        });
+
+        if (error) Alert.alert('Viga sisselogimisel', error.message);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Tundmatu registreerimise viga.';
+      console.log('Ootamatu auth viga:', message);
+      Alert.alert('Viga', message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -74,8 +137,12 @@ const handleAuth = async () => {
                 style={styles.input}
                 placeholder="E-mail"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  setConfirmationMessage('');
+                }}
                 autoCapitalize="none"
+                autoCorrect={false}
                 keyboardType="email-address"
               />
             </View>
@@ -86,7 +153,10 @@ const handleAuth = async () => {
                 style={styles.input}
                 placeholder="Parool"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  setConfirmationMessage('');
+                }}
                 secureTextEntry
               />
             </View>
@@ -101,9 +171,27 @@ const handleAuth = async () => {
               </Text>
             </TouchableOpacity>
 
+            {isSignUp && confirmationMessage ? (
+              <Text style={styles.confirmationText}>{confirmationMessage}</Text>
+            ) : null}
+
+            {!isSignUp && (
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={onForgotPassword}
+                disabled={loading}
+              >
+                <Text style={styles.forgotPasswordText}>Unustasid parooli?</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity 
               style={styles.switchButton} 
-              onPress={() => setIsSignUp(!isSignUp)}
+              onPress={() => {
+                setIsSignUp(!isSignUp);
+                setConfirmationMessage('');
+              }}
+              disabled={loading}
             >
               <Text style={styles.switchText}>
                 {isSignUp ? 'Sul on juba konto? Logi sisse' : 'Pole kontot? Registreeru siin'}
@@ -164,6 +252,9 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.6 },
   buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   
+  confirmationText: { color: '#2E7D32', fontSize: 14, fontWeight: '600', marginTop: 15, textAlign: 'center' },
+  forgotPasswordButton: { marginTop: 15, alignItems: 'center' },
+  forgotPasswordText: { color: '#666', fontSize: 14, fontWeight: '600' },
   switchButton: { marginTop: 20, alignItems: 'center' },
   switchText: { color: '#7C4DFF', fontSize: 14, fontWeight: '600' }
 });
