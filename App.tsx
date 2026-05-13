@@ -9,15 +9,19 @@ import { ForgotPasswordScreen } from './src/screens/ForgotPasswordScreen';
 import { ResetPasswordScreen } from './src/screens/ResetPasswordScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; // bottom-tabs + vector-icons sobivad ka webiga
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { DailyScreen } from './src/screens/DailyScreen';
-import { PracticeScreen } from './src/screens/PracticeScreen'; 
+import { PracticeScreen } from './src/screens/PracticeScreen';
+import { RandomTestScreen } from './src/screens/RandomTestScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { FriendsScreen } from './src/screens/FriendsScreen';
 import { UserProvider, useUser } from './src/context/UserContext';
+import type { RootStackParamList } from './src/navigation/types';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 type AuthView = 'login' | 'forgot-password' | 'reset-password';
 
 // Sõprade ikooni nurga punane täpp: UserContext `redButton` = mitu sulle suunatud ootel kutset on.
@@ -86,6 +90,19 @@ function AppTabs() {
   );
 }
 
+function LoggedInStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="MainTabs" component={AppTabs} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="RandomTest"
+        component={RandomTestScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [authView, setAuthView] = useState<AuthView>('login');
@@ -125,7 +142,7 @@ export default function App() {
       ) : (
         <UserProvider>
           <NavigationContainer>
-            <AppTabs />
+            <LoggedInStack />
           </NavigationContainer>
         </UserProvider>
       )}

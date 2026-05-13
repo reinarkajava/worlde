@@ -1,16 +1,16 @@
 // src/screens/RandomTestScreen - Igapäevase sõna prototüüp.
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../theme/colors';
-import { Keyboard } from '../components/Keyboard';
-import { Grid } from '../components/Grid';
-import { getKeyStatuses } from '../utils/gameLogic';
-import { EndModal } from '../components/EndModal';
-import { useUser } from '../context/UserContext';
+import { Colors } from '../../theme/colors';
+import { Keyboard } from '../../components/Keyboard';
+import { Grid } from '../../components/Grid';
+import { getKeyStatuses } from '../../utils/gameLogic';
+import { EndModal } from '../../components/EndModal';
+import { useUser } from '../../context/UserContext';
 
 // Sõna kättesaamine db-st — tabeli sonad rida ja täieliku nimekirja päring (teised ekraanid võivad kasutada).
 /** `public.sonad` —  Supabase veerud: id, sona, sona_pikkus. */
@@ -29,7 +29,7 @@ export async function fetchSonadRows(): Promise<SonadRow[]> {
 }
 
 const ROWS = 6;
-const COLS = 5;
+const COLS = 4;
 
 
 export const RandomTestScreen = () => {
