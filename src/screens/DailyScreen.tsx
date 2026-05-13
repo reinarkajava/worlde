@@ -1,30 +1,49 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../theme/colors';
 import { useUser } from '../context/UserContext';
 import { supabase } from '../lib/supabase';
+import type { RootStackParamList } from '../navigation/types';
 
-const CHALLENGES = [
-  { id: '1', title: '4 Täheline', subtitle: '4 täheline sõna', icon: '4' },
-  { id: '2', title: '5 Täheline #1', subtitle: '5 täheline sõna', icon: '5' },
-  { id: '3', title: '5 Täheline #2', subtitle: '5 täheline sõna', icon: '5' },
-  { id: '4', title: '5 Täheline #3', subtitle: '5 täheline sõna', icon: '5' },
-  { id: '5', title: '6 Täheline', subtitle: '6 täheline sõna', icon: '6' },
+type DailyPuzzleRoute = keyof Pick<RootStackParamList, 'Daily4' | 'Daily5' | 'Daily6'>;
+
+const CHALLENGES: {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  routeName: DailyPuzzleRoute;
+}[] = [
+  { id: '1', title: '4 Täheline', subtitle: '4 täheline sõna', icon: '4', routeName: 'Daily4' },
+  { id: '2', title: '5 Täheline', subtitle: '5 täheline sõna', icon: '5', routeName: 'Daily5' },
+  { id: '3', title: '6 Täheline', subtitle: '6 täheline sõna', icon: '6', routeName: 'Daily6' },
 ];
 
 export const DailyScreen = () => {
+  const navigation = useNavigation();
+  const { userEmail } = useUser();
 
-    const { userEmail } = useUser();
+  const openDailyPuzzle = (routeName: DailyPuzzleRoute) => {
+    navigation
+      .getParent<NativeStackNavigationProp<RootStackParamList>>()
+      ?.navigate(routeName);
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) Alert.alert('Viga', error.message);
   };
 
-  const renderItem = ({ item }: { item: typeof CHALLENGES[0] }) => (
-    <TouchableOpacity style={styles.card}>
+  const renderItem = ({ item }: { item: (typeof CHALLENGES)[number] }) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => openDailyPuzzle(item.routeName)}
+      accessibilityRole="button"
+      accessibilityLabel={item.title}
+    >
       <View style={styles.cardLeft}>
         <View style={styles.iconCircle}>
           <Text style={styles.iconText}>{item.icon}</Text>
@@ -64,7 +83,7 @@ export const DailyScreen = () => {
           </View>
         </View>
         
-        <Text style={styles.progressText}>0/5 päevaväljakutset tehtud</Text>
+        <Text style={styles.progressText}>0/3 päevaväljakutset tehtud</Text>
         <View style={styles.progressBarBackground}>
           <View style={[styles.progressBarFill, { width: '0%' }]} />
         </View>

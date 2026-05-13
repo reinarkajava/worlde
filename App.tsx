@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { DailyScreen } from './src/screens/DailyScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
 import { RandomTestScreen } from './src/screens/RandomTestScreen';
+import { RandomTestScreen as Daily4LetterScreen } from './src/screens/Daily/Daily4Letter';
+import { RandomTestScreen as Daily5LetterScreen } from './src/screens/Daily/Daily5Letter';
+import { RandomTestScreen as Daily6LetterScreen } from './src/screens/Daily/Daily6Letter';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { FriendsScreen } from './src/screens/FriendsScreen';
 import { UserProvider, useUser } from './src/context/UserContext';
@@ -99,6 +102,9 @@ function LoggedInStack() {
         component={RandomTestScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="Daily4" component={Daily4LetterScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Daily5" component={Daily5LetterScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Daily6" component={Daily6LetterScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
