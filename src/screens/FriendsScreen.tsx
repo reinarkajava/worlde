@@ -1,8 +1,12 @@
-// src/screens/FriendsScreen.tsx
-import React, { useCallback, useEffect, useState } from 'react';
+//Sisaldab sõprade leidmise, kutsete saatmise, kutsetele vastamise ja sõbra eemaldamise loogikat.
+//Kasutab meie Supabase'i andmebaasi sõprade andmete hankimiseks ja sõbrakutsete haldamiseks (Friends list tabel)
+//src/components/DiagConfirm.tsx sisaldab sõbra eemaldamise kasti, mis käib kokku lehe stiiliga. Enne seda oli tavaline alertbox
+//src/context/UserContext.tsx sisaldab kasutaja konteksti, mis hoiab e-posti päise ja sõbrakutsete teavituse punase täpi loendurit.
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,9 +16,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { DiagConfirm } from '../components/DiagConfirm';
 import { useUser } from '../context/UserContext';
 import { supabase } from '../lib/supabase';
-
+//tüübid sõprade andmete hankimiseks
 type Profile = {
   id: string;
   email: string;
@@ -28,9 +34,18 @@ type FriendRequest = {
   receiver_id: string;
   status: 'pending' | 'accepted' | 'rejected';
 };
-
+//Profiilipilt e-posti esimese kahe tähega
 const getInitials = (email: string) => email.substring(0, 2).toLowerCase();
 
+const showAlert = (title: string, message?: string) => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.alert(message ? `${title}\n\n${message}` : title);
+    return;
+  }
+  if (message !== undefined) Alert.alert(title, message);
+  else Alert.alert(title);
+};
+//Loogika sõprade andmete hankimiseks
 export const FriendsScreen = () => {
   const { userEmail } = useUser();
   const [currentUserId, setCurrentUserId] = useState('');
@@ -40,6 +55,11 @@ export const FriendsScreen = () => {
   const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [removePrompt, setRemovePrompt] = useState<{
+    requestId: string;
+    friendEmail: string;
+  } | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -49,19 +69,35 @@ export const FriendsScreen = () => {
   const fetchFriendData = useCallback(async (userId: string) => {
     setLoading(true);
 
-    const { data: requests, error } = await supabase
-      .from('friend_requests')
-      .select('id, sender_id, receiver_id, status')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .in('status', ['pending', 'accepted']);
+    // Päringud sõprade andmete hankimiseks
+    const selectCols = 'id, sender_id, receiver_id, status';
+    const statusFilter = ['pending', 'accepted'] as const;
 
+    const [asSender, asReceiver] = await Promise.all([
+      supabase
+        .from('friend_requests')
+        .select(selectCols)
+        .eq('sender_id', userId)
+        .in('status', [...statusFilter]),
+      supabase
+        .from('friend_requests')
+        .select(selectCols)
+        .eq('receiver_id', userId)
+        .in('status', [...statusFilter]),
+    ]);
+
+    const error = asSender.error || asReceiver.error;
     if (error) {
       setLoading(false);
       Alert.alert('Viga', error.message);
       return;
     }
 
-    const typedRequests = (requests || []) as FriendRequest[];
+    const byId = new Map<string, FriendRequest>();
+    for (const row of [...(asSender.data || []), ...(asReceiver.data || [])]) {
+      byId.set(row.id, row as FriendRequest);
+    }
+    const typedRequests = Array.from(byId.values());
     setFriendRequests(typedRequests);
 
     const profileIds = Array.from(
@@ -99,23 +135,26 @@ export const FriendsScreen = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    const loadCurrentUser = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-
-      if (error) {
-        Alert.alert('Viga', error.message);
-        return;
-      }
-
-      if (user) {
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (!active) return;
+        if (error) {
+          Alert.alert('Viga', error.message);
+          return;
+        }
+        if (!user) return;
         setCurrentUserId(user.id);
         fetchFriendData(user.id);
-      }
-    };
+      })();
+      return () => {
+        active = false;
+      };
+    }, [fetchFriendData])
+  );
 
-    loadCurrentUser();
-  }, [fetchFriendData]);
 
   const existingRequestForProfile = (profileId: string) =>
     friendRequests.find((request) => {
@@ -125,6 +164,7 @@ export const FriendsScreen = () => {
 
       return isSamePair && ['pending', 'accepted'].includes(request.status);
     });
+//Kasutaja otsimine e-posti järgi. Kontroll kas kasutaja eksisteerib ja keelab iseenda sõbraks lisamist.
 
   const searchUser = async () => {
     const normalizedEmail = searchEmail.trim().toLowerCase();
@@ -151,7 +191,7 @@ export const FriendsScreen = () => {
     }
 
     if (!data) {
-      Alert.alert('Ei leitud', 'Selle e-posti aadressiga kasutajat ei leitud.');
+      Alert.alert('Ei leitud', 'Selle e-postiga kasutajat ei leitud. Kontrolli kirjutatud aadressi uuesti');
       return;
     }
 
@@ -162,6 +202,11 @@ export const FriendsScreen = () => {
 
     setSearchResult(data as Profile);
   };
+
+
+
+//Sõbrakutse saatmine
+//Kontrollitakse ka kas sõbrakutse on juba olemas ja selle staatust
 
   const sendFriendRequest = async (receiverId: string) => {
     if (!currentUserId) return;
@@ -197,6 +242,9 @@ export const FriendsScreen = () => {
     fetchFriendData(currentUserId);
   };
 
+
+
+//Sõbrakutse vastuse loogika
   const updateFriendRequest = async (
     requestId: string,
     status: 'accepted' | 'rejected'
@@ -214,6 +262,44 @@ export const FriendsScreen = () => {
     fetchFriendData(currentUserId);
   };
 
+
+
+
+
+//Sõbra eemaldamine
+  const confirmRemoveFriend = async () => {
+    if (!removePrompt || !currentUserId) return;
+    const { requestId } = removePrompt;
+    setRemoveBusy(true);
+
+    const { data, error } = await supabase
+      .from('friend_requests')
+      .delete()
+      .eq('id', requestId)
+      .select('id');
+
+    setRemoveBusy(false);
+
+    if (error) {
+      showAlert('Viga', error.message);
+      return;
+    }
+    if (!data?.length) {
+      showAlert('Viga', 'Sõpra ei õnnestunud eemaldada. Proovi uuesti.');
+      return;
+    }
+
+    setRemovePrompt(null);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentUserId(user.id);
+      fetchFriendData(user.id);
+    }
+  };
+
+
+
+
   const incomingRequests = friendRequests.filter(
     (request) => request.status === 'pending' && request.receiver_id === currentUserId
   );
@@ -223,6 +309,8 @@ export const FriendsScreen = () => {
   );
 
   const friends = friendRequests.filter((request) => request.status === 'accepted');
+
+
 
   const renderProfileRow = (
     profile: Profile,
@@ -235,7 +323,9 @@ export const FriendsScreen = () => {
           <Text style={styles.avatarText}>{getInitials(profile.email)}</Text>
         </View>
         <View style={styles.playerText}>
-          <Text style={styles.playerName}>{profile.email}</Text>
+          <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
+            {profile.email}
+          </Text>
           <Text style={styles.playerStreak}>
             {subtitle || `Streak: ${profile.current_streak || 0}`}
           </Text>
@@ -257,7 +347,10 @@ export const FriendsScreen = () => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.mainCard}>
           <View style={styles.titleRow}>
             <Ionicons name="people-outline" size={28} color="#4D4DFF" />
@@ -268,7 +361,7 @@ export const FriendsScreen = () => {
           <View style={styles.searchRow}>
             <TextInput
               style={styles.searchInput}
-              placeholder="kasutaja@email.ee"
+              placeholder="e-post siia"
               value={searchEmail}
               onChangeText={setSearchEmail}
               autoCapitalize="none"
@@ -280,7 +373,7 @@ export const FriendsScreen = () => {
               onPress={searchUser}
               disabled={searching}
             >
-              <Text style={styles.searchButtonText}>{searching ? 'Otsin...' : 'Otsi'}</Text>
+              <Text style={styles.searchButtonText}>{searching ? 'Otsin' : 'Otsi'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -293,7 +386,7 @@ export const FriendsScreen = () => {
                 >
                   <Text style={styles.smallButtonText}>Lisa</Text>
                 </TouchableOpacity>,
-                'Leitud kasutaja'
+                'Leitud kasutaja(d)'
               )
             : null}
 
@@ -342,9 +435,21 @@ export const FriendsScreen = () => {
 
             return renderProfileRow(
               profile,
-              <View style={styles.scoreContainer}>
-                <Ionicons name="trophy-outline" size={18} color="#D97706" />
-                <Text style={styles.scoreText}>{profile.total_points || 0}</Text>
+              <View style={styles.friendActions}>
+                <View style={styles.scoreContainer}>
+                  <Ionicons name="trophy-outline" size={18} color="#D97706" />
+                  <Text style={styles.scoreText}>{profile.total_points || 0}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.removeFriendButton}
+                  onPress={() =>
+                    setRemovePrompt({ requestId: request.id, friendEmail: profile.email })
+                  }
+                  accessibilityLabel="Eemalda sõber"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="person-remove-outline" size={22} color="#B91C1C" />
+                </TouchableOpacity>
               </View>
             );
           })}
@@ -353,7 +458,7 @@ export const FriendsScreen = () => {
 
           <Text style={styles.sectionTitle}>Saadetud kutsed</Text>
           {outgoingRequests.length === 0 ? (
-            <Text style={styles.emptyText}>Ootel saadetud kutseid ei ole.</Text>
+            <Text style={styles.emptyText}>Ootel  kutseid ei ole.</Text>
           ) : null}
           {outgoingRequests.map((request) => {
             const profile = profilesById[request.receiver_id];
@@ -363,10 +468,39 @@ export const FriendsScreen = () => {
           })}
         </View>
       </ScrollView>
+
+
+      <DiagConfirm
+        visible={removePrompt !== null}
+        title="Eemalda selle sõber?"
+        message={
+          removePrompt
+            ? `${removePrompt.friendEmail} kaob sinu sõprade nimekirjast. Soovi korral saad alati uue kutse saata.`
+            : ''
+        }
+        cancelLabel="Jäta sõbraks"
+        confirmLabel="Jah, eemalda"
+        tone="danger"
+        busy={removeBusy}
+        onCancel={() => {
+          if (!removeBusy) setRemovePrompt(null);
+        }}
+        onConfirm={confirmRemoveFriend}
+      />
     </SafeAreaView>
   );
 };
+// Ülevalolev kood saab DiagConfirmist stiili  prompt-i jaoks (Ei lasnud kommentaari õigesse kohta panna)
 
+//Back-end koodi lõpp
+
+
+
+
+
+
+
+//Stiilileht
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFF' },
   header: {
@@ -435,7 +569,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-  playerText: { flex: 1 },
+  playerText: { flex: 1, flexShrink: 1, minWidth: 0 },
   playerName: { fontSize: 15, fontWeight: 'bold' },
   playerStreak: { fontSize: 12, color: '#666', marginTop: 2 },
   smallButton: {
@@ -462,7 +596,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  friendActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
   scoreContainer: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   scoreText: { fontSize: 18, fontWeight: 'bold', color: '#D97706' },
+  removeFriendButton: {
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+  },
   pendingText: { color: '#666', fontWeight: 'bold' },
 });

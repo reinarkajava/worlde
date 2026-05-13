@@ -1,3 +1,4 @@
+//Sisselogimise ja registreerimise fail (Front ja back-end kood)
 import { supabase } from '../lib/supabase';
 import React, { useState } from 'react';
 import { 
@@ -23,7 +24,7 @@ export const AuthScreen = ({ onForgotPassword }: AuthScreenProps) => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState('');
-
+//Kui  kasutaja on juba olemas siis antakse teade
   const isDuplicateEmailError = (message: string) => {
     const lowerMessage = message.toLowerCase();
 
@@ -33,13 +34,14 @@ export const AuthScreen = ({ onForgotPassword }: AuthScreenProps) => {
       lowerMessage.includes('user already')
     );
   };
-
+//Kontrollib, kas kõik väljad on täidetud ja kas kasutaja on juba olemas kui kasutaja olemas siis antakse teade
   const showDuplicateEmailAlert = () => {
     Alert.alert(
       'Konto on juba olemas',
-      'Selle e-posti aadressiga konto on juba registreeritud. Palun logi sisse või kasuta parooli taastamist.'
+      'Selle e-posti aadressiga konto on juba registreeritud. Palun logi sisse või taasta oma parool.'
     );
   };
+//Sisselogimise ja registreerimise loogika
 
   const handleAuth = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -203,6 +205,11 @@ export const AuthScreen = ({ onForgotPassword }: AuthScreenProps) => {
     </SafeAreaView>
   );
 };
+//Back-end koodi lõpp
+
+
+//Stiilileht
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFF' },
