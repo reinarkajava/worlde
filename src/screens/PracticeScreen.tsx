@@ -2,6 +2,7 @@
 import { supabase } from '../lib/supabase';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 import { Keyboard } from '../components/Keyboard';
 import { Grid } from '../components/Grid';
@@ -13,6 +14,7 @@ const ROWS = 6;
 const COLS = 5;
 
 export const PracticeScreen = () => {
+  const insets = useSafeAreaInsets();
   const { userEmail } = useUser();
   const [board, setBoard] = useState<string[][]>(
     Array(ROWS).fill(null).map(() => Array(COLS).fill(""))
@@ -123,7 +125,7 @@ export const PracticeScreen = () => {
   return (
     <View style={styles.container}>
       {/* ✅ 2. Header on puhas ja ühel real */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Text style={styles.headerTitle}>Practice</Text>
         <Text style={styles.initials}>
           {userEmail.substring(0, 2).toLowerCase()}
@@ -160,7 +162,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     backgroundColor: 'white',
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -179,6 +182,6 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 'auto',
     width: '100%',
-    paddingBottom: 20,
+    paddingBottom: 12,
   },
 });
