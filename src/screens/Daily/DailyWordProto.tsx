@@ -180,6 +180,7 @@ export const RandomTestScreen = () => {
         .from('profiles')
         .update({
           played_count: newPlayedCount,
+          wins: newWins,
           win_percentage: newWinPercentage,
           current_streak: isWin ? (profile.current_streak || 0) + 1 : 0,
           total_points: newTotalPoints,

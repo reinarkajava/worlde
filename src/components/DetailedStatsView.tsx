@@ -15,8 +15,18 @@ const DUMMY_DATA = {
 export const DetailedStatsView = ({ isVisible, onClose, userStats }: { 
   isVisible: boolean, 
   onClose: () => void,
-  userStats: any 
+  userStats: {
+    played_count?: number;
+    wins?: number;
+    win_percentage?: number;
+    current_streak?: number;
+    total_points?: number;
+  } 
 }) => {
+  const played = userStats.played_count ?? 0;
+  const wins = userStats.wins ?? 0;
+  const winPct =
+    played > 0 ? Math.round((wins / played) * 100) : (userStats.win_percentage ?? 0);
   const [showChart, setShowChart] = useState(false);
   const [activeFriends, setActiveFriends] = useState(['me', 'emma', 'sarah']);
 
@@ -46,16 +56,16 @@ export const DetailedStatsView = ({ isVisible, onClose, userStats }: {
                 <Text style={styles.statLabel}>Played</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statVal}>{userStats.win_percentage}%</Text>
-                <Text style={styles.statLabel}>Win %</Text>
+                <Text style={styles.statVal}>{winPct}%</Text>
+                <Text style={styles.statLabel}>Võitude %</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statVal}>{userStats.current_streak}</Text>
-                <Text style={styles.statLabel}>Current</Text>
+                <Text style={styles.statVal}>{userStats.current_streak ?? 0}</Text>
+                <Text style={styles.statLabel}>Sari</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statVal}>{userStats.total_points}</Text>
-                <Text style={styles.statLabel}>Max</Text>
+                <Text style={styles.statVal}>{userStats.total_points ?? 0}</Text>
+                <Text style={styles.statLabel}>Punktid</Text>
               </View>
             </View>
 

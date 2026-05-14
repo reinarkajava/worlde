@@ -7,22 +7,41 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
 import { DetailedStatsView } from '../components/DetailedStatsView'; // Veendu, et import on õige
 
-const StatItem = ({ label, value }: { label: string; value: string | number }) => (
+const StatItem = ({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+}) => (
   <View style={styles.statBox}>
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
+    {hint ? <Text style={styles.statHint}>{hint}</Text> : null}
   </View>
 );
+
+type ProfileStats = {
+  played_count: number;
+  wins: number;
+  win_percentage: number;
+  current_streak: number;
+  total_points: number;
+};
+
 export const StatsScreen = () => {
   const { userEmail } = useUser(); // Kasutame globaalset emaili
 
   const [isDetailedViewVisible, setIsDetailedViewVisible] = useState(false);
 
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<ProfileStats>({
     played_count: 0,
+    wins: 0,
     win_percentage: 0,
     current_streak: 0,
-    total_points: 0
+    total_points: 0,
   });
 
   const fetchStats = async () => {
@@ -40,7 +59,14 @@ export const StatsScreen = () => {
         return;
     }
     if (data) {
-        setStats(data);
+        const row = data as ProfileStats;
+        setStats({
+          played_count: row.played_count ?? 0,
+          wins: row.wins ?? 0,
+          win_percentage: row.win_percentage ?? 0,
+          current_streak: row.current_streak ?? 0,
+          total_points: row.total_points ?? 0,
+        });
       } else {
         // Kui andmeid ei leitud (uus kasutaja), võime siin vajadusel 
         // profiili luua või jätta vaikimisi nullid (nagu sul state-is on).
@@ -61,6 +87,12 @@ useFocusEffect(
     if (error) Alert.alert('Viga', error.message);
   };
 
+  const played = stats.played_count ?? 0;
+  const wins = stats.wins ?? 0;
+  /** Võitude % = võidud / mängitud mänge (sama loogika mis salvestamisel). */
+  const winPercent =
+    played > 0 ? Math.round((wins / played) * 100) : 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
@@ -78,10 +110,16 @@ useFocusEffect(
           <Text style={styles.cardTitle}>Sinu statistika</Text>
           
           <View style={styles.statsRow}>
-            <StatItem label="Mängud" value={stats.played_count} />
-            <StatItem label="Edukate lahendamiste %" value={stats.win_percentage} />
-            <StatItem label="Streak" value={stats.current_streak} />
-            <StatItem label="Maksimum" value={stats.total_points} />
+            <StatItem label="Mängud" value={played} />
+            <StatItem
+              label="Võitude %"
+              value={`${winPercent}%`}
+            />
+            <StatItem
+              label="Streak"
+              value={stats.current_streak}
+            />
+            <StatItem label="Võite kokku" value={wins} />
           </View>
 
           <View style={[styles.infoCard, { backgroundColor: '#7C4DFF' }]}>
@@ -94,7 +132,7 @@ useFocusEffect(
 
           <View style={[styles.infoCard, { backgroundColor: '#FF5722' }]}>
             <View>
-              <Text style={styles.infoCardLabel}>Harjutamise kõrgeim skoor</Text>
+              <Text style={styles.infoCardLabel}>Kogunenud punktid</Text>
               <Text style={styles.infoCardValue}>{stats.total_points}</Text>
             </View>
             <Ionicons name="barbell-outline" size={40} color="rgba(255,255,255,0.6)" />
@@ -147,7 +185,14 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
   statBox: { alignItems: 'center', flex: 1 },
   statValue: { fontSize: 28, fontWeight: 'bold', color: '#1A1C1E' },
-  statLabel: { fontSize: 13, color: '#666', marginTop: 4 },
+  statLabel: { fontSize: 13, color: '#666', marginTop: 4, textAlign: 'center' },
+  statHint: {
+    fontSize: 10,
+    color: '#888',
+    marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: 2,
+  },
   infoCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',

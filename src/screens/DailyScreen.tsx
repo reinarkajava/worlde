@@ -54,7 +54,7 @@ export const DailyScreen = () => {
 
       if (!data) {
         setDailyError(
-          'Tänase kuupäeva igapäevast mõistatust pole tabelis puzzles. Lisa rida (daily + puzzle_date) või kasuta all prototüüpi.'
+          'Tänase kuupäeva igapäevast mõistatust ei ole leitud. Proovi hiljem uuesti'
         );
         return;
       }
@@ -114,8 +114,7 @@ export const DailyScreen = () => {
           <Text style={styles.mainHeaderText}>Igapäevane sõna</Text>
         </View>
         <Text style={styles.hint}>
-          Ametlik sõna tuleb tabelist <Text style={styles.mono}>puzzles</Text> (sama kuupäev kõigile).
-          Pakkumised võivad tulevikus kontrollida sõnastiku <Text style={styles.mono}>sonad</Text> vastu.
+          Igapäevane sõna Uus sõna iga päev 00.00 EEST.
         </Text>
       </View>
 
@@ -142,7 +141,7 @@ export const DailyScreen = () => {
           accessibilityLabel="Ava tänane ametlik igapäevane sõnamäng"
         >
           <Ionicons name="play" size={22} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.primaryButtonText}>Arva tänane sõna</Text>
+          <Text style={styles.primaryButtonText}>Lahenda tänane sõna</Text>
         </TouchableOpacity>
         {!canOpenOfficialDaily && !dailyLoading ? (
           <TouchableOpacity
@@ -155,7 +154,7 @@ export const DailyScreen = () => {
             accessibilityRole="button"
             accessibilityLabel="Ava prototüüp juhusliku sõnaga sonad tabelist"
           >
-            <Text style={styles.primaryButtonText}>Prototüüp: juhuslik sõna (sonad)</Text>
+            <Text style={styles.primaryButtonText}>Debug: Suvaline sõna tabelist (Harjutus)</Text>
           </TouchableOpacity>
         ) : null}
       </View>
