@@ -125,9 +125,9 @@ export const AuthScreen = ({ onForgotPassword }: AuthScreenProps) => {
             <View style={styles.iconCircle}>
               <Ionicons name="person-add" size={40} color="#7C4DFF" />
             </View>
-            <Text style={styles.title}>{isSignUp ? 'Loo konto' : 'Tere tulemast tagasi'}</Text>
+            <Text style={styles.title}>{isSignUp ? 'Loo konto' : 'Tere tulemast!'}</Text>
             <Text style={styles.subtitle}>
-              {isSignUp ? 'Alusta oma teekonda Wordle meistrina' : 'Logi sisse, et jätkata sealt, kus pooleli jäid'}
+              {isSignUp ? 'Alusta oma teekonda Wordle meistrina' : 'Logi sisse, või loo uus konto, et mängida.'}
             </Text>
           </View>
 
