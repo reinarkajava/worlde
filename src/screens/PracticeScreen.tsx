@@ -1,187 +1,153 @@
-// src/screens/PracticeScreen.tsx
-import { supabase } from '../lib/supabase';
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../theme/colors';
-import { Keyboard } from '../components/Keyboard';
-import { Grid } from '../components/Grid';
-import { getKeyStatuses } from '../utils/gameLogic';
-import { EndModal } from '../components/EndModal';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../context/UserContext';
+import { supabase } from '../lib/supabase';
+import type { RootStackParamList } from '../navigation/types';
 
-const ROWS = 6;
-const COLS = 5;
+type PracticePuzzleRoute = keyof Pick<RootStackParamList, 'Practice4' | 'Practice5' | 'Practice6'>;
+
+const CHALLENGES: {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  routeName: PracticePuzzleRoute;
+}[] = [
+  { id: '1', title: '4 Täheline', subtitle: 'Harjuta 4-tähelist sõna', icon: '4', routeName: 'Practice4' },
+  { id: '2', title: '5 Täheline', subtitle: 'Harjuta 5-tähelist sõna', icon: '5', routeName: 'Practice5' },
+  { id: '3', title: '6 Täheline', subtitle: 'Harjuta 6-tähelist sõna', icon: '6', routeName: 'Practice6' },
+];
 
 export const PracticeScreen = () => {
-  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const { userEmail } = useUser();
-  const [board, setBoard] = useState<string[][]>(
-    Array(ROWS).fill(null).map(() => Array(COLS).fill(""))
+
+  const openPracticePuzzle = (routeName: PracticePuzzleRoute) => {
+    navigation
+      .getParent<NativeStackNavigationProp<RootStackParamList>>()
+      ?.navigate(routeName);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) Alert.alert('Viga', error.message);
+  };
+
+  const renderItem = ({ item }: { item: (typeof CHALLENGES)[number] }) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => openPracticePuzzle(item.routeName)}
+      accessibilityRole="button"
+      accessibilityLabel={item.title}
+    >
+      <View style={styles.cardLeft}>
+        <View style={styles.iconCircle}>
+          <Text style={styles.iconText}>{item.icon}</Text>
+        </View>
+        <View>
+          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+        </View>
+      </View>
+      <Ionicons name="arrow-forward" size={20} color="#7C4DFF" />
+    </TouchableOpacity>
   );
-  const [currentRow, setCurrentRow] = useState(0);
-  const [currentCol, setCurrentCol] = useState(0);
-  const [isGameOver, setIsGameOver] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [didWin, setDidWin] = useState(false);
-
-  const solution = "TREPP";
-
-  //Funktsioon statistika saatmiseks Supabase'i
-  const updatePlayerStats = async (isWin: boolean, attempts: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Küsime profiili andmed
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (profile) {
-      const newPlayedCount = (profile.played_count || 0) + 1;
-      const newWins = isWin ? (profile.wins || 0) + 1 : (profile.wins || 0);
-      const newWinPercentage = Math.round((newWins / newPlayedCount) * 100);
-      
-      // Punktide arvutus: võidu puhul (7 - katsed) * 10 punkti
-      const earnedPoints = isWin ? (7 - attempts) * 10 : 0;
-      const newTotalPoints = (profile.total_points || 0) + earnedPoints;
-
-      await supabase
-        .from('profiles')
-        .update({
-          played_count: newPlayedCount,
-          win_percentage: newWinPercentage,
-          current_streak: isWin ? (profile.current_streak || 0) + 1 : 0,
-          total_points: newTotalPoints,
-        })
-        .eq('id', user.id);
-    }
-  };
-
-  const resetGame = () => {
-    setBoard(Array(ROWS).fill(null).map(() => Array(COLS).fill("")));
-    setCurrentRow(0);
-    setCurrentCol(0);
-    setIsGameOver(false);
-    setDidWin(false);
-    setShowModal(false); // Sulgeme ka akna
-  };
-
-  const handleKeyPress = (key: string) => {
-    // 1. Kui mäng on läbi, reageeri ainult ENTERile
-    if (isGameOver) {
-      if (key === 'ENTER') {
-        setShowModal(true);
-      }
-      return;
-    }
-
-    // 2. ENTER loogika
-    if (key === 'ENTER') {
-      if (currentCol === COLS) {
-        const currentGuess = board[currentRow].join("").toUpperCase();
-        const targetSolution = solution.toUpperCase();
-
-        if (currentGuess === targetSolution) {
-            setCurrentRow(currentRow + 1);
-          setDidWin(true);
-          setIsGameOver(true);
-          setShowModal(true);
-          updatePlayerStats(true, currentRow + 1); // ✅ Salvesta võit
-        } else if (currentRow === ROWS - 1) {
-            setCurrentRow(currentRow + 1);
-          setDidWin(false);
-          setIsGameOver(true);
-          setShowModal(true);
-          updatePlayerStats(false, 6); // ✅ Salvesta kaotus
-        } else {
-          setCurrentRow(currentRow + 1);
-          setCurrentCol(0);
-        }
-      }
-      return;
-    }
-
-    // 3. Kustutamine ja kirjutamine
-    if (key === '⌫') {
-      if (currentCol > 0) {
-        const newBoard = [...board.map(row => [...row])];
-        newBoard[currentRow][currentCol - 1] = "";
-        setBoard(newBoard);
-        setCurrentCol(currentCol - 1);
-      }
-    } else if (currentCol < COLS && currentRow < ROWS) {
-        const newBoard = [...board.map(row => [...row])];
-        newBoard[currentRow][currentCol] = key;
-        setBoard(newBoard);
-        setCurrentCol(currentCol + 1);
-      }
-  };
-
-  const keyStatuses = getKeyStatuses(board, currentRow, solution);
 
   return (
-    <View style={styles.container}>
-      {/* ✅ 2. Header on puhas ja ühel real */}
-      <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Text style={styles.headerTitle}>Practice</Text>
-        <Text style={styles.initials}>
-          {userEmail.substring(0, 2).toLowerCase()}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Ülemine "Wordle" päis */}
+      <View style={styles.topHeader}>
+        <Text style={styles.headerTitle}>Wordle</Text>
+        <View style={styles.topIcons}>
+          <Text style={styles.initials}>{userEmail.substring(0, 2).toLowerCase()}</Text>
+          <TouchableOpacity onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#333" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Harjutamisrežiimi peakaart */}
+      <View style={styles.mainHeaderCard}>
+        <View style={styles.mainHeaderRow}>
+          <View style={styles.mainTitleContainer}>
+            <Ionicons name="barbell" size={24} color="#7C4DFF" style={{ marginRight: 8 }} />
+            <Text style={styles.mainHeaderText}>Harjutamine</Text>
+          </View>
+        </View>
+
+        <Text style={styles.practiceHint}>
+          Iga mäng kasutab juhuslikku sõna. Uut mängu saad alustada valides endale sobiva tähtede arvuga sõna.
+          Päevast limiiti siin pole, harjuta nii palju kui soovid.
         </Text>
       </View>
 
-      {/* 1. RUUDUSTIK */}
-      <Grid board={board} currentRow={currentRow} solution={solution} />
-
-      {/* 2. KLAVIATUUR */}
-      <View style={styles.footer}>
-        <Keyboard onKeyPress={handleKeyPress} keyStatuses={keyStatuses} />
-      </View>
-
-      {/* 3. LÕPUMODAL */}
-      <EndModal 
-        isVisible={showModal}
-        didWin={didWin}
-        solution={solution}
-        onReset={resetGame}
-        onClose={() => setShowModal(false)}
+      {/* Valikud tähtede arvu järgi */}
+      <FlatList
+        data={CHALLENGES}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-  },
-  header: {
+  container: { flex: 1, backgroundColor: '#F8F9FE' },
+  topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingVertical: 15,
     backgroundColor: 'white',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
   },
-  headerTitle: { fontSize: 24, fontWeight: 'bold' },
-  initials: { 
-    color: '#666', 
-    fontSize: 16, 
-    fontWeight: 'bold',
-    backgroundColor: '#F0F0F0',
-    padding: 8,
-    borderRadius: 20,
-    overflow: 'hidden'
+  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A1C1E' },
+  topIcons: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  initials: { fontSize: 16, color: '#666' },
+  
+  mainHeaderCard: {
+    backgroundColor: 'white',
+    margin: 20,
+    padding: 20,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  footer: {
-    marginTop: 'auto',
-    width: '100%',
-    paddingBottom: 12,
+  mainHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  mainTitleContainer: { flexDirection: 'row', alignItems: 'center' },
+  mainHeaderText: { fontSize: 20, fontWeight: 'bold' },
+  practiceHint: { color: '#666', fontSize: 14, lineHeight: 20 },
+
+  listContainer: { paddingHorizontal: 20, paddingBottom: 20 },
+  card: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0FF',
   },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  iconCircle: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: '#F0E6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconText: { color: '#7C4DFF', fontSize: 20, fontWeight: 'bold' },
+  cardTitle: { fontSize: 18, fontWeight: 'bold' },
+  cardSubtitle: { color: '#666', fontSize: 14 },
 });

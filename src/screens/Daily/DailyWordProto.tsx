@@ -225,7 +225,7 @@ export const RandomTestScreen = () => {
         >
           <Ionicons name="chevron-back" size={26} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Random test</Text>
+        <Text style={styles.headerTitle}>Igapäevane sõna</Text>
         <Text style={styles.initials}>
           {userEmail.substring(0, 2).toLowerCase()}
         </Text>
