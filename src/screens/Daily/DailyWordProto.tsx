@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabase';
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/colors';
 import { Keyboard } from '../../components/Keyboard';
@@ -11,6 +12,7 @@ import { Grid } from '../../components/Grid';
 import { getKeyStatuses } from '../../utils/gameLogic';
 import { EndModal } from '../../components/EndModal';
 import { useUser } from '../../context/UserContext';
+import type { RootStackParamList } from '../../navigation/types';
 
 // Sõna kättesaamine db-st — tabeli sonad rida ja täieliku nimekirja päring (teised ekraanid võivad kasutada).
 /** `public.sonad` —  Supabase veerud: id, sona, sona_pikkus. */
@@ -35,6 +37,8 @@ const COLS = 4;
 export const RandomTestScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'DailyPuzzle'>>();
+  const routePuzzleId = route.params?.puzzleId;
   const { userEmail } = useUser();
   const [board, setBoard] = useState<string[][]>(
     Array(ROWS).fill(null).map(() => Array(COLS).fill(""))
@@ -103,10 +107,53 @@ export const RandomTestScreen = () => {
     }
   }, []);
 
-  // Sõna kättesaamine db-st — lae esimene sõna ekraani avamisel
+  const loadSolutionFromPuzzlesTable = useCallback(async (puzzleId: number) => {
+    setSolutionLoading(true);
+    setLoadError(null);
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 25_000);
+    try {
+      const { data, error } = await supabase
+        .from('puzzles')
+        .select('word')
+        .eq('id', puzzleId)
+        .abortSignal(abortController.signal)
+        .maybeSingle();
+
+      if (error) {
+        setLoadError(error.message);
+        return;
+      }
+
+      const w = (data?.word ?? '').trim().toUpperCase();
+      if (w.length !== COLS) {
+        setLoadError(
+          `Puzzles sõna pikkus (${w.length}) ei vasta ruudustikule (${COLS}).`
+        );
+        return;
+      }
+
+      setSolution(w);
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        setLoadError('Päring aegus. Kontrolli võrku või proovi uuesti.');
+      } else {
+        setLoadError(e instanceof Error ? e.message : 'Tundmatu viga');
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      setSolutionLoading(false);
+    }
+  }, []);
+
+  // Sõna allikas: puzzles (igapäevane) või sonad (juhuslik prototüüp)
   useEffect(() => {
-    void pickRandomSolution();
-  }, [pickRandomSolution]);
+    if (routePuzzleId != null) {
+      void loadSolutionFromPuzzlesTable(routePuzzleId);
+    } else {
+      void pickRandomSolution();
+    }
+  }, [routePuzzleId, loadSolutionFromPuzzlesTable, pickRandomSolution]);
 
   //Funktsioon statistika saatmiseks Supabase'i
   const updatePlayerStats = async (isWin: boolean, attempts: number) => {
@@ -150,8 +197,11 @@ export const RandomTestScreen = () => {
     setIsGameOver(false);
     setDidWin(false);
     setShowModal(false);
-    // Sõna kättesaamine db-st — uus juhuslik sõna pärast „Uus mäng“
-    void pickRandomSolution(previous);
+    if (routePuzzleId != null) {
+      void loadSolutionFromPuzzlesTable(routePuzzleId);
+    } else {
+      void pickRandomSolution(previous);
+    }
   };
 
   const handleKeyPress = (key: string) => {
